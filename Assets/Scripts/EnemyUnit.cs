@@ -4,22 +4,13 @@ using UnityEngine;
 public class EnemyUnit : AbstractUnit
 {
 
-    // Logic สำหรับ AI (จะพัฒนาต่อในขั้นตอนถัดไป)
-    public void Behavior()
-    {
-        // AI Logic จะถูกเขียนที่นี่
-        Debug.Log($"Enemy {gameObject.name} is thinking...");
-        // ตัวอย่าง: โจมตีผู้เล่น
-        // FindObjectOfType<PlayerUnit>().TakeDamage(1); 
-    }
-
     // 1. Abstract Method Implementation: การคำนวณ Damage ของศัตรู
-    public override int CalculateDamage(AbstractUnit target)
+    // นี่คือ Method Overriding ของ abstract method จาก AbstractUnit
+    public int CalculateDamage(AbstractUnit target)
     {
-        // Logic คำนวณ Damage พื้นฐานของศัตรู
         int baseDamage = 1;
 
-        // Polymorphism Logic: หากศัตรูอยู่ใน Past Form อาจจะทำ Damage เพิ่มขึ้น
+        // Polymorphism Logic: หากศัตรูอยู่ใน Past Form (element ตรงข้าม) อาจจะทำ Damage เพิ่มขึ้น
         if (this.CurrentElement == ElementType.Past)
         {
             baseDamage += 1;
@@ -29,29 +20,32 @@ public class EnemyUnit : AbstractUnit
     }
 
     // 4. Polymorphism (Method Overloading): เมธอดที่มีชื่อเดียวกัน แต่รับพารามิเตอร์ต่างกัน
+    // เมธอด Attack มาตรฐาน
     public int Attack(AbstractUnit target)
     {
+        // ใช้ CalculateDamage เวอร์ชันมาตรฐาน
         int damage = CalculateDamage(target);
         target.TakeDamage(damage);
         return damage;
     }
 
+    // 4. Polymorphism (Method Overloading): Attack ที่มีตัวคูณความเสียหาย (เช่น Critical Hit)
     public int Attack(AbstractUnit target, float damageMultiplier)
     {
+        // ใช้ CalculateDamage เวอร์ชัน Overloaded
         int damage = (int)(CalculateDamage(target) * damageMultiplier);
         target.TakeDamage(damage);
         return damage;
     }
 
-
-    // 1. Abstract Method Implementation: Logic การโต้ตอบกับ Element
+    // 1. Abstract Method Implementation: Logic การโต้ตอบกับ Element (Polymorphism)
+    // Override จาก AbstractUnit
     public override void HandleElementContact(ElementType element, IElementInteractive sourceObject)
     {
-        // Logic การจัดการเมื่อ Enemy โดน Element โจมตี/กระตุ้น (เช่น โดนศัตรูโจมตี)
-        // อาจจะถูก Stun หรือติดสถานะอื่น ๆ
-        if (element == ElementType.Past)
+        // Enemy เป็น Time Anomaly: แพ้ Present Form (พลังงานบริสุทธิ์)
+        if (element == ElementType.Present)
         {
-            TakeDamage(2); // Past Form อาจทำ Damage ได้ดีกว่า
+            TakeDamage(3); // รับ Damage มากกว่าเมื่อโดนธาตุที่ตรงข้าม
         }
         else
         {
@@ -60,10 +54,16 @@ public class EnemyUnit : AbstractUnit
     }
 
     // 1. Abstract Method Implementation: Logic การตายของศัตรู
+    // Override จาก AbstractUnit
     protected override void Die()
     {
-        Debug.Log($"Enemy {gameObject.name} destroyed.");
-        // Logic การให้คะแนนหรือ Item Drop
+        Debug.Log($"Enemy {gameObject.name} destroyed. Temporal Anomaly neutralized.");
         Destroy(this.gameObject);
+    }
+
+    // เมธอด Behavior จะถูกเรียกใช้ผ่าน EnemyAI script
+    public void Behavior()
+    {
+        // Logic AI จะถูกสั่งการและควบคุมใน EnemyAI.cs
     }
 }

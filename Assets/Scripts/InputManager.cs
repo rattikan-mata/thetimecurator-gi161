@@ -3,21 +3,31 @@ using UnityEngine;
 public class InputManager : MonoBehaviour
 {
 
-    // อ้างอิงถึง PlayerUnit เพื่อส่งคำสั่ง
+    // Reference to PlayerUnit and GameManager
     public PlayerUnit player;
+    public GameManager gameManager; // Must be linked to GameManager
+
+    // Distance for checking collisions on the Grid (should be 0.5f or according to grid size)
+    [SerializeField] private float checkDistance = 0.5f;
 
     void Update()
     {
-        if (player == null) return;
+        if (player == null || gameManager == null) return;
 
-        // ตรวจสอบการสลับ Element (ใช้ปุ่ม E)
+        // Check for Element Shift (using 'E' key)
         if (Input.GetKeyDown(KeyCode.E))
         {
+            // Check AP before shifting (Uses player.Stats for Encapsulation)
+            if (!player.Stats.UseActionPoint(1))
+            {
+                Debug.Log("Cannot shift element: Not enough Action Points.");
+                return;
+            }
             player.ShiftElement();
+            gameManager.EndPlayerTurn();
         }
 
-        // ตรวจสอบการเคลื่อนที่
-        // ในเกม Grid-Based เราจะใช้ปุ่มลูกศรเพื่อกำหนดทิศทางการเคลื่อนที่
+        // Check for Movement (Arrow Keys)
         if (Input.GetKeyDown(KeyCode.UpArrow))
         {
             TryMoveAndInteract(Vector3.up);
@@ -38,43 +48,89 @@ public class InputManager : MonoBehaviour
 
     private void TryMoveAndInteract(Vector3 direction)
     {
-        // ตำแหน่งเป้าหมายคือ ตำแหน่งปัจจุบัน + 1 ช่อง ตามทิศทาง
+        // Target position (using simple addition for grid-based movement)
         Vector3 targetPosition = player.transform.position + direction;
 
-        // ในเกม Grid-Based เราต้องหาว่าในตำแหน่งเป้าหมายนั้น มีวัตถุอะไรอยู่บ้าง
-        // *****************************************************************
-        // 1. ตรวจสอบว่าตำแหน่งเป้าหมายมี IElementInteractive Object หรือไม่
+        // 1. Try to use Action Point: Stop if AP runs out (Encapsulation)
+        if (!player.Stats.UseActionPoint(1))
+        {
+            Debug.Log("Cannot move: Not enough Action Points.");
+            return;
+        }
+
+        // 2. Check for interactive object at the target position
         IElementInteractive targetObject = FindInteractiveObjectAtPosition(targetPosition);
+
+        bool movementSuccess = false;
 
         if (targetObject != null)
         {
-            // 2. ถ้ามีวัตถุโต้ตอบได้ ให้เรียกเมธอด InteractWith() ของ Player
-            // นี่คือการเรียกใช้ Polymorphism!
-            player.InteractWith(targetObject);
+            // A. Interact with object (Polymorphism)
+            bool interactionSuccessful = false;
+
+            // Safety check for destroyed objects
+            if (targetObject is Component component && component.gameObject != null)
+            {
+                player.InteractWith(targetObject);
+                interactionSuccessful = true;
+            }
+
+            // Logic after interaction:
+            if (targetObject.Equals(null) && interactionSuccessful)
+            {
+                // A1. If object was destroyed (e.g., IceBlock), move Player to the target spot
+                player.MoveTo(targetPosition);
+                movementSuccess = true;
+            }
+            else if (!interactionSuccessful)
+            {
+                // A2. Interaction failed (e.g., hitting a wall/blocked path): Do not move, refund AP.
+                player.Stats.ResetActionPoints(); // Refund AP
+                Debug.Log("Collision blocked movement. AP returned.");
+                return;
+            }
+            else if (interactionSuccessful)
+            {
+                // A3. Interaction was successful but object wasn't destroyed (e.g., walking over cooled lava, activating an Anchor): move Player
+                player.MoveTo(targetPosition);
+                movementSuccess = true;
+            }
         }
         else
         {
-            // 3. ถ้าไม่มีวัตถุโต้ตอบ ให้เคลื่อนที่ตามปกติ
+            // B. No interactive object, move normally
             player.MoveTo(targetPosition);
+            movementSuccess = true;
         }
 
-        // ในเกม Turn-Based ต้องแจ้ง GameManager ว่าผู้เล่นทำ Action เสร็จแล้ว
-        // GameManager.EndPlayerTurn(); 
-        // *****************************************************************
+        // End turn only if movement/action was completed successfully
+        if (movementSuccess)
+        {
+            gameManager.EndPlayerTurn();
+        }
+        else
+        {
+            // If movement wasn't successful and AP was refunded, the turn ends.
+            gameManager.EndPlayerTurn();
+        }
     }
 
-    // เมธอดสำหรับจำลองการค้นหาวัตถุใน Grid (ในโค้ดจริงจะซับซ้อนกว่านี้)
+    // Method to find IElementInteractive object at the target grid position (using Physics2D)
     private IElementInteractive FindInteractiveObjectAtPosition(Vector3 position)
     {
-        // ในโปรเจกต์จริง: ค้นหา GameObject ที่มี Component IElementInteractive ในตำแหน่งนั้น
-        // สำหรับการทดลองเบื้องต้น: เราสามารถใช้ Physics.OverlapBox หรือ Tag/Layer 
 
-        Collider2D hit = Physics2D.OverlapBox(position, new Vector2(0.5f, 0.5f), 0);
+        // Use OverlapBoxAll to detect any colliders at the target spot
+        Collider2D[] hits = Physics2D.OverlapBoxAll(position, new Vector2(checkDistance, checkDistance), 0);
 
-        if (hit != null)
+        foreach (Collider2D hit in hits)
         {
-            // พยายามดึง Interface IElementInteractive จากวัตถุที่ชน
-            return hit.GetComponent<IElementInteractive>();
+            // Try to get the IElementInteractive interface from the hit object
+            IElementInteractive interactive = hit.GetComponent<IElementInteractive>();
+            if (interactive != null)
+            {
+                // Return the object that implements the Interface
+                return interactive;
+            }
         }
         return null;
     }

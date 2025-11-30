@@ -22,11 +22,10 @@ public class CorruptLava : TerrainObject
             // Logic: ถ้าอยู่ใน Present Form ลาวาจะร้อนจัดและทำลายผู้เล่น
             Debug.Log("Lava is too hot in Present Form! Player takes damage.");
 
-            // ทำ Damage ผู้เล่น
+            // ทำ Damage ผู้เล่น (Damage Logic ถูกควบคุมโดย Encapsulation ใน PlayerUnit.TakeDamage)
             player.TakeDamage(5);
 
             // ส่ง false กลับไป เพื่อบอก PlayerUnit ว่าการโต้ตอบไม่สำเร็จ (ห้ามเดินผ่าน)
-            // ถ้า Health เป็น 0 Logic Die() จะถูกเรียกใน AbstractUnit/PlayerUnit
             return false;
         }
     }

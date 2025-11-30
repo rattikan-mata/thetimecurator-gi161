@@ -1,6 +1,5 @@
 using UnityEngine;
 
-// Enum: รายการธาตุที่เราใช้ (Present / Past)
 public enum ElementType
 {
     Present, // ปัจจุบัน (Element หลัก)
@@ -12,37 +11,21 @@ public class UnitStats
 {
 
     // Encapsulation: ตัวแปรเป็น Private (ซ่อนข้อมูล)
-    // ใช้ [SerializeField] เพื่อให้เห็นค่าใน Unity Inspector
     [SerializeField] private int _health = 10;
     [SerializeField] private ElementType _currentElement = ElementType.Present;
     [SerializeField] private int _actionPoints = 1;
+    private const int INITIAL_AP = 1; // กำหนดค่าเริ่มต้น AP (ค่าคงที่)
 
     // Public Getter/Setter: ควบคุมการเข้าถึงข้อมูล
-    // get; private set; หมายความว่า: อ่านค่าได้จากภายนอก แต่แก้ไขได้จากภายในคลาสนี้เท่านั้น
-    public int Health
-    {
-        get { return _health; }
-        private set { _health = value; }
-    }
+    public int Health { get { return _health; } private set { _health = value; } }
+    public ElementType CurrentElement { get { return _currentElement; } private set { _currentElement = value; } }
+    public int ActionPoints { get { return _actionPoints; } private set { _actionPoints = value; } }
 
-    public ElementType CurrentElement
-    {
-        get { return _currentElement; }
-        private set { _currentElement = value; }
-    }
-
-    public int ActionPoints
-    {
-        get { return _actionPoints; }
-        private set { _actionPoints = value; }
-    }
-
-    // เมธอดสำหรับแก้ไขค่า Health (ช่องทางเดียวในการลด/เพิ่มเลือด)
+    // เมธอดสำหรับแก้ไขค่า Health
     public void ChangeHealth(int amount)
     {
         this.Health += amount;
         if (this.Health < 0) this.Health = 0;
-
         Debug.Log("Health changed by: " + amount + ". New Health: " + this.Health);
     }
 
@@ -64,5 +47,12 @@ public class UnitStats
         }
         Debug.Log("Not enough Action Points.");
         return false;
+    }
+
+    // เมธอดสำหรับคืน Action Point (สำคัญสำหรับ GameManager)
+    public void ResetActionPoints()
+    {
+        this.ActionPoints = INITIAL_AP;
+        Debug.Log("Action Points reset to " + INITIAL_AP);
     }
 }
